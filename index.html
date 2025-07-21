@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boitumelo Monoketsi - Speaker & Change Driver</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        /* Inter Font Import */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            scroll-behavior: smooth;
+            margin: 0;
+            overflow-x: hidden; /* Prevent horizontal scroll for main page */
+        }
+
+        /* Custom animation for fade-in-up */
+        @keyframes fade-in-up {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in-up {
+            animation: fade-in-up 0.8s ease-out forwards;
+            opacity: 0; /* Hidden by default */
+        }
+
+        .animate-fade-in-up.delay-200 {
+            animation-delay: 0.2s;
+        }
+
+        .animate-fade-in-up.delay-400 {
+            animation-delay: 0.4s;
+        }
+
+        /* Custom shadow for inner-lg */
+        .shadow-inner-lg {
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.06), inset 0 4px 6px 0 rgba(0, 0, 0, 0.04);
+        }
+
+        /* Custom text shadow for glow effect (for hero text) */
+        .text-shadow-glow {
+            text-shadow: 0 0 8px rgba(191, 172, 181, 0.6), 0 0 15px rgba(127, 123, 130, 0.4);
+        }
+
+        /* Ensure Three.js canvas covers the full viewport and stays fixed */
+        #hero-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0; /* Behind content overlays */
+        }
+
+        /* Adjust main padding to ensure content starts correctly after fixed header */
+        main {
+            padding-top: 0; /* Hero section handles its own height */
+        }
+
+        /* Mobile navigation overlay */
+        .mobile-nav-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(23, 33, 33, 0.95); /* Eerie black with transparency */
+            z-index: 100; /* Above everything else */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transform: translateX(100%); /* Start off-screen */
+            transition: transform 0.3s ease-out;
+        }
+
+        .mobile-nav-overlay.open {
+            transform: translateX(0);
+        }
+
+        .mobile-nav-overlay .nav-button {
+            font-size: 1.8rem;
+            margin: 1rem 0;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: background-color 0.2s ease-in-out;
+        }
+
+        .mobile-nav-overlay .nav-button:hover {
+            background-color: rgba(191, 172, 181, 0.2); /* Rose Quartz subtle hover */
+        }
+
+        .mobile-nav-close-btn {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: none;
+            border: none;
+            font-size: 2rem;
+            color: white;
+            cursor: pointer;
+            z-index: 101;
+        }
+
+        /* Horizontal Carousel Specific Styles */
+        .horizontal-carousel-container {
+            width: 100%;
+            overflow: hidden; /* Hide overflowing items */
+            position: relative;
+        }
+
+        .horizontal-carousel-inner {
+            display: flex;
+            width: 300vw; /* 3 items * 100vw */
+            transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Smooth transition */
+            will-change: transform; /* Optimize for animation */
+        }
+
+        .carousel-item {
+            flex: 0 0 100vw; /* Each item takes full viewport width */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 2rem;
+            background-color: #172121; /* Eerie Black background */
+            color: white;
+            min-height: 80vh; /* Ensure enough height for content */
+        }
+
+        .carousel-item h2 {
+            font-size: 3rem; /* Adjust as needed */
+            margin-bottom: 1rem;
+        }
+
+        .carousel-item p {
+            font-size: 1.5rem; /* Adjust as needed */
+            max-width: 40rem;
+            line-height: 1.6;
+        }
+
+        /* Styles for the carousel navigation dots */
+        .carousel-dots {
+            display: flex;
+            justify-content: center;
+            padding: 1rem 0;
+            background-color: #172121; /* Match carousel background */
+        }
+
+        .carousel-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #7f7b82; /* Taupe Gray */
+            margin: 0 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.3s ease-in-out, transform 0.3s ease-in-out;
+        }
+
+        .carousel-dot.active {
+            background-color: #bfacb5; /* Rose Quartz */
+            transform: scale(1.2);
+        }
+    </style>
+</head>
+<body class="font-inter antialiased text-[#444554] bg-gradient-to-br from-[#e5d0cc] to-white min-h-screen">
+
+    <!-- Header -->
+    <header id="main-header" class="fixed top-0 left-0 right-0 z-50 bg-white bg-opacity-95 backdrop-blur-sm shadow-xl py-4 px-6 md:px-12 flex justify-between items-center rounded-b-3xl transform transition-all duration-300 ease-in-out">
+        <div class="text-2xl font-extrabold text-[#172121] tracking-tight">
+            Boitumelo Monoketsi
+        </div>
+        <nav class="hidden md:flex space-x-8">
+            <button onclick="scrollToSection('home')" class="relative text-lg font-medium transition-all duration-300 ease-in-out text-[#172121] font-bold nav-button" data-section-id="home">Home</button>
+            <button onclick="scrollToSection('about')" class="relative text-lg font-medium transition-all duration-300 ease-in-out text-[#444554] hover:text-[#bfacb5] nav-button" data-section-id="about">About</button>
+            <button onclick="scrollToSection('initiatives')" class="relative text-lg font-medium transition-all duration-300 ease-in-out text-[#444554] hover:text-[#bfacb5] nav-button" data-section-id="initiatives">Initiatives</button>
+            <button onclick="scrollToSection('heritage')" class="relative text-lg font-medium transition-all duration-300 ease-in-out text-[#444554] hover:text-[#bfacb5] nav-button" data-section-id="heritage">Cultural Heritage</button>
+            <button onclick="scrollToSection('gallery')" class="relative text-lg font-medium transition-all duration-300 ease-in-out text-[#444554] hover:text-[#bfacb5] nav-button" data-section-id="gallery">Gallery</button>
+            <button onclick="scrollToSection('partnerships-contact')" class="relative text-lg font-medium transition-all duration-300 ease-in-out text-[#444554] hover:text-[#bfacb5] nav-button" data-section-id="partnerships-contact">Partnerships & Contact</button>
+        </nav>
+        <!-- Mobile menu button -->
+        <div class="md:hidden">
+            <button id="mobile-menu-btn" class="text-[#444554] hover:text-[#bfacb5] focus:outline-none">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Mobile Navigation Overlay -->
+    <div id="mobile-nav-overlay" class="mobile-nav-overlay">
+        <button id="mobile-nav-close-btn" class="mobile-nav-close-btn">&times;</button>
+        <nav class="flex flex-col items-center">
+            <button onclick="scrollToSectionAndCloseMenu('home')" class="nav-button" data-section-id="home">Home</button>
+            <button onclick="scrollToSectionAndCloseMenu('about')" class="nav-button" data-section-id="about">About</button>
+            <button onclick="scrollToSectionAndCloseMenu('initiatives')" class="nav-button" data-section-id="initiatives">Initiatives</button>
+            <button onclick="scrollToSectionAndCloseMenu('heritage')" class="nav-button" data-section-id="heritage">Cultural Heritage</button>
+            <button onclick="scrollToSectionAndCloseMenu('gallery')" class="nav-button" data-section-id="gallery">Gallery</button>
+            <button onclick="scrollToSectionAndCloseMenu('partnerships-contact')" class="nav-button" data-section-id="partnerships-contact">Partnerships & Contact</button>
+        </nav>
+    </div>
+
+    <main>
+        <!-- Static Hero Section -->
+        <section id="home" class="relative h-screen overflow-hidden bg-[#172121] flex items-center justify-center">
+            <!-- Three.js Canvas will be fixed and cover the viewport -->
+            <canvas id="hero-canvas"></canvas>
+
+            <!-- Hero Content Overlay -->
+            <div class="relative z-10 text-center px-6 max-w-4xl mx-auto text-white">
+                <h1 class="text-5xl md:text-7xl font-extrabold leading-tight mb-4 drop-shadow-lg text-shadow-glow text-white animate-fade-in-up">
+                    Boitumelo Monoketsi
+                </h1>
+                <p class="text-xl md:text-2xl font-light mb-8 drop-shadow-md text-gray-200 animate-fade-in-up delay-200">
+                    A Visionary Speaker Driving Change Across <span class="text-[#bfacb5] font-bold">Africa</span> and Beyond.
+                </p>
+                <button
+                    onclick="scrollToSection('partnerships-contact')"
+                    class="px-10 py-4 bg-gradient-to-r from-[#172121] to-[#bfacb5] text-white text-lg font-semibold rounded-full shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300 ease-in-out animate-fade-in-up delay-400 border-2 border-white/50">
+                    Contact
+                </button>
+                <div class="absolute bottom-8 right-8 z-10 text-gray-200 text-sm font-semibold rotate-90 origin-bottom-right animate-pulse hidden md:block">
+                    SCROLL TO DISCOVER
+                </div>
+            </div>
+        </section>
+
+        <!-- Horizontal Carousel Section -->
+        <section id="key-themes" class="relative bg-[#172121] py-16 z-20">
+            <div class="horizontal-carousel-container">
+                <div class="horizontal-carousel-inner">
+                    <div class="carousel-item">
+                        <h2 class="text-5xl md:text-7xl font-extrabold text-white drop-shadow-lg text-shadow-glow">
+                            Global <span class="text-[#bfacb5]">Impact</span>
+                        </h2>
+                        <p class="text-xl md:text-2xl font-light text-gray-200 mt-4 max-w-2xl">
+                            Boitumelo's work creates lasting change, empowering communities and fostering sustainable development worldwide.
+                        </p>
+                    </div>
+                    <div class="carousel-item">
+                        <h2 class="text-5xl md:text-7xl font-extrabold text-white drop-shadow-lg text-shadow-glow">
+                            Transformative <span class="text-[#bfacb5]">Education</span>
+                        </h2>
+                        <p class="text-xl md:text-2xl font-light text-gray-200 mt-4 max-w-2xl">
+                            Championing quality education and indigenous learning systems to nurture future generations.
+                        </p>
+                    </div>
+                    <div class="carousel-item">
+                        <h2 class="text-5xl md:text-7xl font-extrabold text-white drop-shadow-lg text-shadow-glow">
+                            An Inspiring <span class="text-[#bfacb5]">Speaker</span>
+                        </h2>
+                        <p class="text-xl md:text-2xl font-light text-gray-200 mt-4 max-w-2xl">
+                            Engaging audiences with powerful insights on cultural heritage, community development, and global leadership.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="carousel-dots">
+                <span class="carousel-dot active" data-slide="0"></span>
+                <span class="carousel-dot" data-slide="1"></span>
+                <span class="carousel-dot" data-slide="2"></span>
+            </div>
+        </section>
+
+        <!-- About Boitumelo Section -->
+        <section id="about" class="py-20 px-6 bg-white shadow-inner-lg relative z-20">
+            <div class="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+                <div class="relative group overflow-hidden rounded-3xl shadow-xl transform hover:scale-[1.01] transition-all duration-500 ease-in-out">
+                    <img
+                        src="/resource/lanscapre-zoom1.jpeg"
+                        alt="Boitumelo Monoketsi speaking"
+                        class="w-full h-96 object-cover object-center transform group-hover:scale-110 transition-transform duration-500 ease-in-out"
+                        onerror="this.onerror=null;this.src='https://placehold.co/600x400/E0E7FF/4338CA?text=Image+1'"
+                    />
+                    <div class="absolute inset-0 bg-gradient-to-t from-[#172121]/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-8">
+                        <p class="text-white text-lg font-semibold">"Empowering communities for a brighter future."</p>
+                    </div>
+                </div>
+                <div>
+                    <h2 class="text-4xl font-bold text-[#172121] mb-6 border-b-4 border-[#bfacb5] pb-2 inline-block">
+                        About Boitumelo
+                    </h2>
+                    <p class="text-[#444554] text-lg leading-relaxed mb-4">
+                        Boitumelo Monoketsi is a 51-year-old social entrepreneur with extensive experience in Education, Property development, and Community Development. Her passion for children has evolved to address critical social issues such as poverty, child-headed families, gender-based violence (GBV), and the lack of access to opportunities and economic involvement for marginalized communities through rural wealth creation and skills programs.
+                    </p>
+                    <p class="text-[#444554] text-lg leading-relaxed mb-4">
+                        Her commitment extends to active involvement in various government and non-governmental policy initiatives, including the DSBD NISSED Policy Dialogue on Township Economy Revitalisation, The National Policy Development Framework, the BRICS Skills Development Working Group, CRL, Nedlac, SSCN, NDP, WHRDN Women Human Rights Defenders Network, Commonwealth, AU, and the Competitions Commission.
+                    </p>
+                    <p class="text-[#444554] text-lg leading-relaxed mb-8">
+                        Boitumelo firmly believes that identity lies within culture and sports, and that Arts and Culture plays a crucial role in the Africa we all want to see. Her efforts are dedicated to ensuring that cultural heritage is not only protected and restored, but also serves as a foundation for a decolonized and unified African future. As a speaker, she champions these causes, driving change and inspiring action across the continent and the world.
+                    </p>
+                    <button
+                        onclick="scrollToSection('partnerships-contact')"
+                        class="px-8 py-3 bg-gradient-to-r from-[#172121] to-[#bfacb5] text-white text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ease-in-out">
+                        Connect with Boitumelo
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Initiatives Section -->
+        <section id="initiatives" class="py-20 px-6 bg-[#e5d0cc] relative z-20">
+            <div class="max-w-6xl mx-auto">
+                <h2 class="text-4xl font-bold text-[#172121] mb-12 text-center border-b-4 border-[#bfacb5] pb-2 inline-block mx-auto">
+                    Impactful Initiatives
+                </h2>
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
+                    <div class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-2 transition-all duration-300 ease-in-out border border-[#7f7b82]">
+                        <h3 class="text-2xl font-semibold text-[#444554] mb-4">Bright Start College & Bright Start ECD Group</h3>
+                        <p class="text-[#444554] leading-relaxed">Empowering and holistically developing learners whilst providing quality education to nurture future generations.</p>
+                    </div>
+                    <div class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-2 transition-all duration-300 ease-in-out border border-[#7f7b82]">
+                        <h3 class="text-2xl font-semibold text-[#444554] mb-4">GAD Real Estate Development</h3>
+                        <p class="text-[#444554] leading-relaxed">Fostering community development through sustainable and inclusive investments, ensuring communities benefit from their natural resources.</p>
+                    </div>
+                    <div class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-2 transition-all duration-300 ease-in-out border border-[#7f7b82]">
+                        <h3 class="text-2xl font-semibold text-[#444554] mb-4">The ECDC</h3>
+                        <p class="text-[#444554] leading-relaxed">Dedicated to policy dialogues around educational transformation, alongside designing sustainable food security programmes in marginalised communities.</p>
+                    </div>
+                    <div class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-2 transition-all duration-300 ease-in-out border border-[#7f7b82]">
+                        <h3 class="text-2xl font-semibold text-[#444554] mb-4">Bright Star Foundation</h3>
+                        <p class="text-[#444554] leading-relaxed">The Corporate Social Investment (CSI) arm, focusing on community development and acting as an advocacy and policy agent for rural and township communities, promoting their participation in the economic landscape and actualising SDG2030 plans, collaborating with rural leaders to build integrated SDG hubs.</p>
+                    </div>
+                    <div class="bg-white p-8 rounded-2xl shadow-lg hover:shadow-xl transform hover:-translate-y-2 transition-all duration-300 ease-in-out border border-[#7f7b82]">
+                        <h3 class="text-2xl font-semibold text-[#444554] mb-4">Foundation of African Royals</h3>
+                        <p class="text-[#444554] leading-relaxed">A movement by African royal councils in reform programmes aimed at connecting the land, its resources and nature with identity and forging inter & intra trade between Africans for African economic growth and sustainability.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Cultural Heritage Section -->
+        <section id="heritage" class="py-20 px-6 bg-white relative z-20">
+            <div class="max-w-6xl mx-auto grid md:grid-cols-2 gap-12 items-center">
+                <div>
+                    <h2 class="text-4xl font-bold text-[#172121] mb-6 border-b-4 border-[#bfacb5] pb-2 inline-block">
+                        Championing African Identity & Cultural Heritage
+                    </h2>
+                    <p class="text-[#444554] text-lg leading-relaxed mb-4">
+                        Boitumelo Monoketsi is a proud Co-Facilitator of the C20 Cultural Diversity, Recognition and Embracement focus area, specifically concentrating on the Protection & Restitution of Cultural Heritage. This vital work seamlessly integrates with the Pan African Lecture Forum for Think Tanks, which champions Indigenous Learning and Cultural Systems.
+                    </p>
+                    <p class="text-[#444554] text-lg leading-relaxed mb-4">
+                        This initiative is a cornerstone of the One Africa Curricular Transformation and Decolonisation Programme, hosted by African countries.
+                    </p>
+                    <p class="text-[#444554] text-lg leading-relaxed mb-8">
+                        She also actively collaborates with the Foundation of African Royals, advocating for the inclusion of indigenous African literature, music, drama, art, culture, history, and heritage in these critical dialogues and initiatives. Her dedication ensures that cultural heritage is not only protected and restored, but also serves as a foundation for a decolonized and unified African future.
+                    </p>
+                    <button
+                        onclick="scrollToSection('partnerships-contact')"
+                        class="px-8 py-3 bg-gradient-to-r from-[#172121] to-[#bfacb5] text-white text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ease-in-out">
+                        Explore Collaborations
+                    </button>
+                </div>
+                <div class="relative group overflow-hidden rounded-3xl shadow-xl transform hover:scale-[1.01] transition-all duration-500 ease-in-out">
+                    <img
+                        src="/resource/partraid1.jpeg"
+                        alt="Boitumelo Monoketsi on a panel"
+                        class="w-full h-96 object-cover object-center transform group-hover:scale-110 transition-transform duration-500 ease-in-out"
+                        onerror="this.onerror=null;this.src='https://placehold.co/600x400/E0E7FF/4338CA?text=Image+2'"
+                    />
+                    <div class="absolute inset-0 bg-gradient-to-t from-[#444554]/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-8">
+                        <p class="text-white text-lg font-semibold">"Her identity lies within culture and sports."</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Gallery Section with Blurred Edges -->
+        <section id="gallery" class="py-20 px-6 bg-[#e5d0cc] relative z-20">
+            <div class="max-w-6xl mx-auto">
+                <h2 class="text-4xl font-bold text-[#172121] mb-12 text-center border-b-4 border-[#bfacb5] pb-2 inline-block mx-auto">
+                    Gallery & Speaking Engagements
+                </h2>
+                <p class="text-center text-[#444554] mb-12 max-w-2xl mx-auto">
+                    Here are some moments from Boitumelo Monoketsi's speaking engagements and public appearances. The images feature a subtle blurred edge effect, which can be easily adjusted in the code.
+                </p>
+                <div class="grid md:grid-cols-2 lg:grid-cols-2 gap-10">
+                    <div class="relative w-full h-96 rounded-3xl overflow-hidden shadow-xl group cursor-pointer transform hover:scale-[1.02] transition-all duration-300 ease-in-out">
+                        <div class="absolute inset-0 z-10 flex items-center justify-center">
+                            <div class="relative w-[90%] h-[90%] rounded-2xl overflow-hidden">
+                                <img
+                                    src="/resource/lanscapre-talk.jpeg"
+                                    alt="Speaking engagement 1"
+                                    class="absolute inset-0 w-full h-full object-cover object-center"
+                                    onerror="this.onerror=null;this.src='https://placehold.co/600x400/E0E7FF/4338CA?text=Image+1'"
+                                />
+                                <div
+                                    class="absolute inset-0"
+                                    style="mask-image: radial-gradient(ellipse at center, black 60%, transparent 100%); -webkit-mask-image: radial-gradient(ellipse at center, black 60%, transparent 100%); filter: blur(10px); transform: scale(1.1);"
+                                >
+                                    <img
+                                        src="/resource/lanscapre-talk2.jpeg"
+                                        alt="Blurred background 1"
+                                        class="w-full h-full object-cover object-center"
+                                        onerror="this.onerror=null;this.src='https://placehold.co/600x400/E0E7FF/4338CA?text=Image+1'"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-[#172121]/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-8">
+                            <p class="text-white text-xl font-semibold">Moment from a speaking engagement.</p>
+                        </div>
+                    </div>
+                    <div class="relative w-full h-96 rounded-3xl overflow-hidden shadow-xl group cursor-pointer transform hover:scale-[1.02] transition-all duration-300 ease-in-out">
+                        <div class="absolute inset-0 z-10 flex items-center justify-center">
+                            <div class="relative w-[90%] h-[90%] rounded-2xl overflow-hidden">
+                                <img
+                                    src="/resource/lanscapre-zoom1.jpeg"
+                                    alt="Speaking engagement 2"
+                                    class="absolute inset-0 w-full h-full object-cover object-center"
+                                    onerror="this.onerror=null;this.src='https://placehold.co/600x400/E0E7FF/4338CA?text=Image+2'"
+                                />
+                                <div
+                                    class="absolute inset-0"
+                                    style="mask-image: radial-gradient(ellipse at center, black 60%, transparent 100%); -webkit-mask-image: radial-gradient(ellipse at center, black 60%, transparent 100%); filter: blur(10px); transform: scale(1.1);"
+                                >
+                                    <img
+                                        src="/resource/partraid1.jpeg"
+                                        alt="Blurred background 2"
+                                        class="w-full h-full object-cover object-center"
+                                        onerror="this.onerror=null;this.src='https://placehold.co/600x400/E0E7FF/4338CA?text=Image+2'"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-[#172121]/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-8">
+                            <p class="text-white text-xl font-semibold">Moment from a speaking engagement.</p>
+                        </div>
+                    </div>
+                    <!-- <div class="relative w-full h-96 rounded-3xl overflow-hidden shadow-xl group cursor-pointer transform hover:scale-[1.02] transition-all duration-300 ease-in-out">
+                        <div class="absolute inset-0 z-10 flex items-center justify-center">
+                            <div class="relative w-[90%] h-[90%] rounded-2xl overflow-hidden">
+                                <img
+                                    src="http://googleusercontent.com/file_content/1"
+                                    alt="Speaking engagement 3"
+                                    class="absolute inset-0 w-full h-full object-cover object-center"
+                                    onerror="this.onerror=null;this.src='https://placehold.co/600x400/E0E7FF/4338CA?text=Image+3'"
+                                />
+                                <div
+                                    class="absolute inset-0"
+                                    style="mask-image: radial-gradient(ellipse at center, black 60%, transparent 100%); -webkit-mask-image: radial-gradient(ellipse at center, black 60%, transparent 100%); filter: blur(10px); transform: scale(1.1);"
+                                >
+                                    <img
+                                        src="http://googleusercontent.com/file_content/1"
+                                        alt="Blurred background 3"
+                                        class="w-full h-full object-cover object-center"
+                                        onerror="this.onerror=null;this.src='https://placehold.co/600x400/E0E7FF/4338CA?text=Image+3'"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-[#172121]/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-8">
+                            <p class="text-white text-xl font-semibold">Moment from a speaking engagement.</p>
+                        </div>
+                    </div> -->
+                    <!-- <div class="relative w-full h-96 rounded-3xl overflow-hidden shadow-xl group cursor-pointer transform hover:scale-[1.02] transition-all duration-300 ease-in-out">
+                        <div class="absolute inset-0 z-10 flex items-center justify-center">
+                            <div class="relative w-[90%] h-[90%] rounded-2xl overflow-hidden">
+                                <img
+                                    src="http://googleusercontent.com/file_content/0"
+                                    alt="Speaking engagement 4"
+                                    class="absolute inset-0 w-full h-full object-cover object-center"
+                                    onerror="this.onerror=null;this.src='https://placehold.co/600x400/E0E7FF/4338CA?text=Image+4'"
+                                />
+                                <div
+                                    class="absolute inset-0"
+                                    style="mask-image: radial-gradient(ellipse at center, black 60%, transparent 100%); -webkit-mask-image: radial-gradient(ellipse at center, black 60%, transparent 100%); filter: blur(10px); transform: scale(1.1);"
+                                >
+                                    <img
+                                        src="http://googleusercontent.com/file_content/0"
+                                        alt="Blurred background 4"
+                                        class="w-full h-full object-cover object-center"
+                                        onerror="this.onerror=null;this.src='https://placehold.co/600x400/E0E7FF/4338CA?text=Image+4'"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-[#172121]/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end p-8">
+                            <p class="text-white text-xl font-semibold">Moment from a speaking engagement.</p>
+                        </div>
+                    </div> -->
+                </div>
+                <p class="text-center text-[#7f7b82] text-sm mt-8">---
+                </p>
+            </div>
+        </section>
+
+        <!-- Partnerships and Contact Section -->
+        <section id="partnerships-contact" class="py-20 px-6 bg-white relative z-20">
+            <div class="max-w-6xl mx-auto text-center">
+                <h2 class="text-4xl font-bold text-[#172121] mb-12 border-b-4 border-[#bfacb5] pb-2 inline-block mx-auto">
+                    Strategic Partnerships & Affiliations
+                </h2>
+
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 mt-12 mb-16">
+                    <div class="bg-[#e5d0cc] p-6 rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-200 ease-in-out border border-[#7f7b82] flex items-center justify-center h-24">
+                        <span class="text-lg font-semibold text-[#444554]">ECDC</span>
+                    </div>
+                    <div class="bg-[#e5d0cc] p-6 rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-200 ease-in-out border border-[#7f7b82]">
+                        <span class="text-lg font-semibold text-[#444554]">AFECN</span>
+                    </div>
+                    <div class="bg-[#e5d0cc] p-6 rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-200 ease-in-out border border-[#7f7b82]">
+                        <span class="text-lg font-semibold text-[#444554]">AU CESA</span>
+                    </div>
+                    <div class="bg-[#e5d0cc] p-6 rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-200 ease-in-out border border-[#7f7b82]">
+                        <span class="text-lg font-semibold text-[#444554]">SACCI</span>
+                    </div>
+                    <div class="bg-[#e5d0cc] p-6 rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300 ease-in-out border border-[#7f7b82]">
+                        <span class="text-lg font-semibold text-[#444554]">NSBC</span>
+                    </div>
+                    <div class="bg-[#e5d0cc] p-6 rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-200 ease-in-out border border-[#7f7b82]">
+                        <span class="text-lg font-semibold text-[#444554]">SAWG-SDGs</span>
+                    </div>
+                    <div class="bg-[#e5d0cc] p-6 rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-200 ease-in-out border border-[#7f7b82]">
+                        <span class="text-lg font-semibold text-[#444554]">C20</span>
+                    </div>
+                    <div class="bg-[#e5d0cc] p-6 rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-200 ease-in-out border border-[#7f7b82]">
+                        <span class="text-lg font-semibold text-[#444554]">UN-PAF</span>
+                    </div>
+                    <div class="bg-[#e5d0cc] p-6 rounded-xl shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-200 ease-in-out border border-[#7f7b82]">
+                        <span class="text-lg font-semibold text-[#444554]">FAR</span>
+                    </div>
+                </div>
+
+                <h2 class="text-4xl font-bold text-[#172121] mb-12 border-b-4 border-[#bfacb5] pb-2 inline-block mx-auto">
+                    Connect with Boitumelo
+                </h2>
+
+                <div class="max-w-2xl mx-auto bg-[#e5d0cc] p-8 rounded-2xl shadow-lg border border-[#bfacb5]">
+                    <p class="text-[#444554] text-lg mb-6">
+                        For collaborations, speaking engagements, or inquiries, please feel free to reach out. Boitumelo Monoketsi is eager to connect with organizations and individuals dedicated to driving positive change in Africa and across the globe.
+                    </p>
+                    <a
+                        href="mailto:tumi@brightstarfoundation.org.za"
+                        class="inline-block px-8 py-4 bg-gradient-to-r from-[#172121] to-[#bfacb5] text-white text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 ease-in-out">
+                        Email Boitumelo
+                    </a>
+                    <!-- Social media links -->
+                    <div class="mt-8 flex justify-center space-x-6">
+                        <a href="#" class="text-[#444554] hover:text-[#bfacb5] transition-colors duration-200">
+                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33V22C18.343 21.128 22 16.991 22 12z" clip-rule="evenodd" />
+                            </svg>
+                        </a>
+                        <a href="#" class="text-[#444554] hover:text-[#bfacb5] transition-colors duration-200">
+                            <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 014 9.74c-.095 0-.187.007-.28.015a4.106 4.106 0 003.29 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.08c-.473 0-.92-.027-1.35-.078a11.64 11.64 0 0014.246 2.088c.032.017.064.033.096.05a4.106 4.106 0 003.834 2.85A8.233 8.233 0 012 18.08c-.473 0-.92-.027-1.35-.078a11.64 11.64 0 0014.246 2.088c.032.017.064.033.096.05z" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-[#172121] text-white py-8 px-6 text-center rounded-t-3xl mt-12">
+        <p>&copy; <span id="current-year"></span> Boitumelo Monoketsi. All rights reserved.</p>
+        <p class="text-sm mt-2">Designed for impact and inspiration.</p>
+    </footer>
+
+    <script>
+        // Global variables and data
+        const images = [
+            "http://googleusercontent.com/file_content/3", // WhatsApp Image 2025-07-21 at 11.52.03.jpeg
+            "http://googleusercontent.com/file_content/2", // WhatsApp Image 2025-07-21 at 11.53.51.jpeg
+            "http://googleusercontent.com/file_content/1", // WhatsApp Image 2025-07-21 at 11.54.00.jpeg
+            "http://googleusercontent.com/file_content/0"  // WhatsApp Image 2025-07-21 at 11.56.13.jpeg
+        ];
+
+        const sections = [
+            { id: 'home', name: 'Home' },
+            { id: 'key-themes', name: 'Key Themes' }, // New section for horizontal carousel
+            { id: 'about', name: 'About' },
+            { id: 'initiatives', name: 'Initiatives' },
+            { id: 'heritage', name: 'Cultural Heritage' },
+            { id: 'gallery', name: 'Gallery' },
+            { id: 'partnerships-contact', name: 'Partnerships & Contact' },
+        ];
+
+        const contactEmail = 'tumi@brightstarfoundation.org.za';
+
+        // Three.js variables
+        let scene, camera, renderer, universeMesh, animationFrameId;
+        let currentScrollY = 0;
+
+        // Carousel variables
+        let carouselContainer;
+        let carouselInner; // New variable for the inner container
+        let carouselDots;
+        let activeCarouselDot = 0;
+        let autoSlideInterval; // Variable to hold the interval ID
+
+        // Function to handle window resize (moved to global scope)
+        function onWindowResize() {
+            if (camera && renderer) {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            }
+            // Update carousel inner width on resize
+            if (carouselInner && carouselContainer) {
+                carouselInner.style.transform = `translateX(-${activeCarouselDot * 100}vw)`;
+            }
+        }
+
+        // Function to handle scroll and update active section for navigation
+        function handleScroll() {
+            currentScrollY = window.scrollY;
+
+            // Update active section in header navigation
+            let foundActive = false;
+            // Check if 'home' (static hero) is active
+            const homeSection = document.getElementById('home');
+            if (homeSection && currentScrollY < homeSection.offsetHeight - window.innerHeight * 0.5) {
+                updateActiveNav('home');
+                foundActive = true;
+            } else {
+                // Check for other sections
+                for (let i = sections.length - 1; i >= 0; i--) {
+                    const section = sections[i];
+                    const element = document.getElementById(section.id);
+                    if (element) { // Removed section.id !== 'home' check as home is handled above
+                        const offsetTop = element.offsetTop - window.innerHeight * 0.5;
+                        if (currentScrollY >= offsetTop) {
+                            updateActiveNav(section.id);
+                            foundActive = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            if (!foundActive && currentScrollY === 0) {
+                updateActiveNav('home');
+            }
+        }
+
+        function updateActiveNav(activeId) {
+            document.querySelectorAll('.nav-button').forEach(button => {
+                button.classList.remove('text-[#172121]', 'font-bold');
+                button.classList.add('text-[#444554]', 'hover:text-[#bfacb5]');
+                button.classList.remove('before:w-full');
+            });
+            const activeButton = document.querySelector(`.nav-button[data-section-id="${activeId}"]`);
+            if (activeButton) {
+                activeButton.classList.add('text-[#172121]', 'font-bold');
+                activeButton.classList.remove('text-[#444554]', 'hover:text-[#bfacb5]');
+                activeButton.classList.add('before:w-full');
+            }
+        }
+
+        // Smooth scroll to section
+        function scrollToSection(id) {
+            const element = document.getElementById(id);
+            if (element) {
+                window.scrollTo({
+                    top: element.offsetTop - 80, // Adjust for fixed header
+                    behavior: 'smooth'
+                });
+            }
+        }
+
+        // Function to scroll and close mobile menu
+        function scrollToSectionAndCloseMenu(id) {
+            scrollToSection(id);
+            document.getElementById('mobile-nav-overlay').classList.remove('open');
+        }
+
+        // Three.js Initialization
+        function initThreeJS() {
+            const canvas = document.getElementById('hero-canvas');
+            if (!canvas || typeof THREE === 'undefined') {
+                console.error("Three.js canvas or library not found.");
+                return;
+            }
+
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+
+            // Load the universe image texture
+            const textureLoader = new THREE.TextureLoader();
+            // Using a plain black placeholder image to avoid any text
+            const universeTexture = textureLoader.load(
+                'https://placehold.co/1920x1080/172121/172121.png', // Eerie Black background, no text
+                undefined,
+                undefined,
+                function (err) {
+                    console.error('An error occurred loading the texture:', err);
+                    // Fallback to a solid eerie black background if image fails
+                    scene.background = new THREE.Color(0x172121);
+                }
+            );
+
+            // Create a large sphere to act as the universe background
+            const sphereGeometry = new THREE.SphereGeometry(500, 60, 40); // Radius, widthSegments, heightSegments
+            sphereGeometry.scale(-1, 1, 1); // Invert normals for inside viewing
+
+            const sphereMaterial = new THREE.MeshBasicMaterial({
+                map: universeTexture,
+                side: THREE.DoubleSide // Render both sides of the sphere
+            });
+
+            universeMesh = new THREE.Mesh(sphereGeometry, sphereMaterial);
+            scene.add(universeMesh);
+
+            // Add a subtle ambient light to make the sphere visible even if the texture is dark
+            const ambientLight = new THREE.AmbientLight(0x404040); // Soft white light
+            scene.add(ambientLight);
+
+            // Add a directional light for some subtle shading/depth
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            directionalLight.position.set(0, 1, 0); // From top
+            scene.add(directionalLight);
+
+            camera.position.z = 0.1; // Camera inside the sphere
+
+            animate();
+        }
+
+        // Animation loop (simplified for static hero)
+        function animate() {
+            animationFrameId = requestAnimationFrame(animate);
+
+            // Subtle, continuous rotation for the universe background
+            if (universeMesh) {
+                universeMesh.rotation.x += 0.00005;
+                universeMesh.rotation.y += 0.0001;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // Carousel Dot Logic
+        function updateCarouselDots(newActiveIndex) {
+            if (carouselDots) {
+                carouselDots.forEach((dot, index) => {
+                    if (index === newActiveIndex) {
+                        dot.classList.add('active');
+                    } else {
+                        dot.classList.remove('active');
+                    }
+                });
+                activeCarouselDot = newActiveIndex;
+            }
+        }
+
+        // Automatic Carousel Slide Function (using transform)
+        function autoSlide() {
+            if (!carouselInner || !carouselContainer) {
+                console.error("Carousel elements not found for autoSlide.");
+                return;
+            }
+            const carouselItems = carouselInner.querySelectorAll('.carousel-item');
+            const totalItems = carouselItems.length;
+
+            if (totalItems === 0) {
+                console.warn("No carousel items found for auto-slide.");
+                return;
+            }
+
+            activeCarouselDot = (activeCarouselDot + 1) % totalItems;
+            carouselInner.style.transform = `translateX(-${activeCarouselDot * 100}vw)`;
+            updateCarouselDots(activeCarouselDot);
+        }
+
+        function setupCarousel() {
+            carouselContainer = document.querySelector('.horizontal-carousel-container');
+            carouselInner = document.querySelector('.horizontal-carousel-inner'); // Get the inner container
+            carouselDots = document.querySelectorAll('.carousel-dot');
+
+            if (carouselContainer && carouselInner && carouselDots.length > 0) {
+                // Set initial transform
+                carouselInner.style.transform = `translateX(-${activeCarouselDot * 100}vw)`;
+
+                // Start automatic sliding
+                const slideIntervalTime = 5000; // 5 seconds per slide
+                if (autoSlideInterval) {
+                    clearInterval(autoSlideInterval);
+                }
+                autoSlideInterval = setInterval(autoSlide, slideIntervalTime);
+
+                // Pause on hover
+                carouselContainer.addEventListener('mouseenter', () => {
+                    clearInterval(autoSlideInterval);
+                });
+                carouselContainer.addEventListener('mouseleave', () => {
+                    autoSlideInterval = setInterval(autoSlide, slideIntervalTime);
+                });
+
+                // Manual dot clicks (if desired, though auto-slide is primary)
+                carouselDots.forEach((dot, index) => {
+                    dot.addEventListener('click', () => {
+                        clearInterval(autoSlideInterval); // Pause auto-slide on manual interaction
+                        activeCarouselDot = index;
+                        carouselInner.style.transform = `translateX(-${activeCarouselDot * 100}vw)`;
+                        updateCarouselDots(activeCarouselDot);
+                        autoSlideInterval = setInterval(autoSlide, slideIntervalTime); // Resume auto-slide
+                    });
+                });
+
+                // Initial active dot
+                updateCarouselDots(0);
+            } else {
+                console.error("Carousel elements not found during setup.");
+            }
+        }
+
+
+        // Event Listeners
+        window.addEventListener('resize', onWindowResize);
+        window.addEventListener('scroll', handleScroll);
+
+        // Mobile menu toggle
+        document.addEventListener('DOMContentLoaded', () => {
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const mobileNavOverlay = document.getElementById('mobile-nav-overlay');
+            const mobileNavCloseBtn = document.getElementById('mobile-nav-close-btn');
+
+            if (mobileMenuBtn) {
+                mobileMenuBtn.addEventListener('click', () => {
+                    mobileNavOverlay.classList.add('open');
+                });
+            }
+            if (mobileNavCloseBtn) {
+                mobileNavCloseBtn.addEventListener('click', () => {
+                    mobileNavOverlay.classList.remove('open');
+                });
+            }
+
+            // Set current year on footer
+            document.getElementById('current-year').textContent = new Date().getFullYear();
+
+            // Initialize Three.js
+            initThreeJS();
+
+            // Setup Carousel
+            setupCarousel();
+        });
+    </script>
+</body>
+</html>
